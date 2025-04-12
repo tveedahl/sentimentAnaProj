@@ -1,4 +1,5 @@
 import sqlite3
+import nltk
 import tkinter as tk
 from tkinter import messagebox
 
@@ -20,10 +21,26 @@ def submit_input():
     user_text = entry.get()
     if user_text.strip():
         save_to_db(user_text)
-        messagebox.showinfo("Input Saved", f"You entered: {user_text}")
+        #Determine user input sentiment here
+        user_inputs = load_inputs_as_dicts()
+        for item in user_inputs:
+            print(user_inputs)
+        messagebox.showinfo("Input Saved", f"The User Sentient So Far Suggests: {user_inputs}")
         entry.delete(0, tk.END)  # Clear entry after saving
     else:
         messagebox.showwarning("Empty Input", "Please enter something.")
+
+def load_inputs_as_dicts():
+    conn = sqlite3.connect("user_inputs.db")
+    conn.row_factory = sqlite3.Row  # Access rows as dictionaries
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM inputs ORDER BY timestamp DESC")
+    rows = cursor.fetchall()
+    
+    results = [dict(row) for row in rows]  # Convert Row objects to dicts
+    conn.close()
+    return results
 
 # Create the main window
 root = tk.Tk()
