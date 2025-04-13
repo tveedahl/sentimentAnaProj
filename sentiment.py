@@ -2,6 +2,11 @@ import sqlite3
 import nltk
 import tkinter as tk
 from tkinter import messagebox
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+from nltk import tokenize
+
+# Download VADER lexicon if needed
+nltk.download("vader_lexicon")
 
 def save_to_db(data):
     conn = sqlite3.connect("user_inputs.db")
@@ -21,43 +26,41 @@ def submit_input():
     user_text = entry.get()
     if user_text.strip():
         save_to_db(user_text)
-        #Determine user input sentiment here
-        user_inputs = load_inputs_as_dicts()
-        for item in user_inputs:
-            print(user_inputs)
-        messagebox.showinfo("Input Saved", f"The User Sentient So Far Suggests: {user_inputs}")
+
+        user_inputs = load_inputs_as_tuples()
+        sid = SentimentIntensityAnalyzer()
+
+        for row in user_inputs:
+            text = row[0]  # Get the actual content string from the tuple
+            print(f"Analyzing: {text}")
+            scores = sid.polarity_scores(text)
+            summary = "\n".join([f"{k.capitalize()}: {v:.2f}" for k, v in scores.items()])
+            messagebox.showinfo("Input Saved", f"Sentiment Analysis:\n{summary}")
+
         entry.delete(0, tk.END)  # Clear entry after saving
     else:
         messagebox.showwarning("Empty Input", "Please enter something.")
 
-def load_inputs_as_dicts():
+def load_inputs_as_tuples():
     conn = sqlite3.connect("user_inputs.db")
-    conn.row_factory = sqlite3.Row  # Access rows as dictionaries
     cursor = conn.cursor()
-    
-    cursor.execute("SELECT * FROM inputs ORDER BY timestamp DESC")
+    cursor.execute("SELECT content FROM inputs ORDER BY timestamp DESC LIMIT 1")
     rows = cursor.fetchall()
-    
-    results = [dict(row) for row in rows]  # Convert Row objects to dicts
     conn.close()
-    return results
+    return rows
 
-# Create the main window
+# GUI setup
 root = tk.Tk()
 root.title("User Input GUI")
-root.geometry("3000x1000")
+root.geometry("500x200")
 
-# Create a label
-label = tk.Label(root, text="Enter something:")
+label = tk.Label(root, text="What's On Your Mind?")
 label.pack(pady=5)
 
-# Create a text entry field
-entry = tk.Entry(root, width=30)
+entry = tk.Entry(root, width=50)
 entry.pack(pady=5)
 
-# Create a submit button
 submit_button = tk.Button(root, text="Submit", command=submit_input)
 submit_button.pack(pady=10)
 
-# Run the application
 root.mainloop()
